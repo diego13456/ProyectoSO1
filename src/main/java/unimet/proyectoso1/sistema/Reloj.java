@@ -1,14 +1,15 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package unimet.proyectoso1.sistema;
 
-public class Reloj extends Thread {
-    private final int tiempoPulsoMs; 
+import javax.swing.SwingUtilities;
+import unimet.proyectoso1.gui.VentanaPrincipal;
 
-    public Reloj(int tiempoPulsoMs) {
+public class Reloj extends Thread {
+    private int tiempoPulsoMs; 
+    private final VentanaPrincipal ventana; 
+
+    public Reloj(int tiempoPulsoMs, VentanaPrincipal ventana) {
         this.tiempoPulsoMs = tiempoPulsoMs;
+        this.ventana = ventana;
     }
 
     @Override
@@ -26,11 +27,20 @@ public class Reloj extends Thread {
 
                 CPU.ejecutarCiclo();
 
+                SwingUtilities.invokeLater(() -> {
+                    ventana.refrescarTodo();
+                });
+
                 Nucleo.mutex.release(); 
 
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Reloj interrumpido: " + e.getMessage());
+                break; 
             }
         }
+    }
+
+    public void setVelocidad(int nuevaVelocidadMs) {
+        this.tiempoPulsoMs = nuevaVelocidadMs;
     }
 }

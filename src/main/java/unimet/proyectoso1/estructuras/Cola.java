@@ -48,4 +48,16 @@ public class Cola<T> {
     public int getTamano() {
         return tamano;
     }
+    
+    public T obtenerPorIndice(int indice) {
+    if (indice < 0 || indice >= tamano) {
+        return null;
+    }
+    
+    Nodo<T> actual = frente;
+    for (int i = 0; i < indice; i++) {
+        actual = actual.getSiguiente();
+    }
+    return actual.getDato();
+}
 }
