@@ -6,6 +6,7 @@ import java.awt.*;
 import unimet.proyectoso1.estructuras.Cola;
 import unimet.proyectoso1.modelo.PCB;
 import unimet.proyectoso1.sistema.Nucleo;
+import unimet.proyectoso1.sistema.ManejadorHardware;
 
 public class VentanaPrincipal extends JFrame {
 
@@ -15,14 +16,17 @@ public class VentanaPrincipal extends JFrame {
     private final Font FUENTE_MONO = new Font("Monospaced", Font.BOLD, 14);
 
     private DefaultTableModel modListos, modBloqueados, modNuevos, modSuspBloq;
-    
     private JLabel lblNombre, lblPC, lblDeadline, lblReloj;
     private JProgressBar barraProgresoCPU;
     private JTextArea areaLog;
     private JComboBox<String> comboAlgoritmo;
     private JSlider sliderVelocidad;
+    
+    // Referencia al manejador para las interrupciones
+    private ManejadorHardware manejadorHardware;
 
     public VentanaPrincipal() {
+        this.manejadorHardware = new ManejadorHardware(this);
         configurarVentana();
         inicializarComponentes();
         this.setLocationRelativeTo(null); 
@@ -49,6 +53,8 @@ public class VentanaPrincipal extends JFrame {
         JButton btnEmergencia = new JButton("EMERGENCY INTERRUPTION");
         btnEmergencia.setBackground(new Color(200, 0, 0));
         btnEmergencia.setForeground(Color.WHITE);
+        btnEmergencia.setFocusPainted(false);
+        btnEmergencia.setFont(new Font("Arial", Font.BOLD, 12));
 
         String[] algos = {"FCFS", "Prioridad", "Round Robin", "SRT", "EDF"};
         comboAlgoritmo = new JComboBox<>(algos);
@@ -60,7 +66,7 @@ public class VentanaPrincipal extends JFrame {
         pnlControles.add(btnEmergencia);
         pnlControles.add(crearLabelSimple("Algoritmo:"));
         pnlControles.add(comboAlgoritmo);
-        pnlControles.add(crearLabelSimple("Velocidad:"));
+        pnlControles.add(crearLabelSimple("Velocidad (ms):"));
         pnlControles.add(sliderVelocidad);
 
         lblReloj = new JLabel("MISSION CLOCK: Cycle 0000");
@@ -85,12 +91,13 @@ public class VentanaPrincipal extends JFrame {
         pnlCentro.add(crearPanelTabla("BLOCKED QUEUE (I/O)", modBloqueados));
 
         pnlCentro.add(crearPanelTabla("READY-SUSPENDED (DISK)", modNuevos));
-        pnlCentro.add(crearPanelLog()); // Panel central inferior para mensajes del sistema
+        pnlCentro.add(crearPanelLog()); 
         pnlCentro.add(crearPanelTabla("BLOCKED-SUSPENDED", modSuspBloq));
 
         add(pnlNorte, BorderLayout.NORTH);
         add(pnlCentro, BorderLayout.CENTER);
 
+        // Action Listeners
         btnAleatorios.addActionListener(e -> generarProcesosLote(20));
         btnEmergencia.addActionListener(e -> activarEmergencia());
     }
@@ -164,7 +171,6 @@ public class VentanaPrincipal extends JFrame {
         return l;
     }
 
-
     public void refrescarTodo() {
         SwingUtilities.invokeLater(() -> {
             try {
@@ -177,9 +183,12 @@ public class VentanaPrincipal extends JFrame {
                     lblNombre.setText(actual.getNombre() + " [ID: " + actual.getId() + "]");
                     lblDeadline.setText("Deadline in: " + actual.getDeadline() + " cycles");
                     
-                    int porcentaje = (actual.getProgramCounter() * 100) / actual.getInstruccionesTotales();
+                    int pc = actual.getProgramCounter();
+                    int total = actual.getInstruccionesTotales();
+                    int porcentaje = (total > 0) ? (pc * 100) / total : 0;
+                    
                     barraProgresoCPU.setValue(porcentaje);
-                    barraProgresoCPU.setString(porcentaje + "% (PC: " + actual.getProgramCounter() + ")");
+                    barraProgresoCPU.setString(porcentaje + "% (PC: " + pc + ")");
                 } else {
                     lblNombre.setText("SYSTEM IDLE");
                     barraProgresoCPU.setValue(0);
@@ -189,7 +198,6 @@ public class VentanaPrincipal extends JFrame {
 
                 actualizarTablaManual(modListos, Nucleo.colaListos);
                 actualizarTablaManual(modNuevos, Nucleo.colaNuevos); 
-                
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -217,7 +225,8 @@ public class VentanaPrincipal extends JFrame {
             Nucleo.mutex.acquire();
             for (int i = 0; i < cantidad; i++) {
                 int id = (int)(Math.random() * 900) + 100;
-                PCB nuevo = new PCB(id, "P_Job", (int)(Math.random() * 5) + 1, 10 + (int)(Math.random() * 10), 100, 0);
+                // PCB: id, nombre, prioridad, instTotales, deadline, cicloExc
+                PCB nuevo = new PCB(id, "Tsk_" + id, (int)(Math.random() * 5) + 1, 10 + (int)(Math.random() * 10), 100, 0);
                 Nucleo.colaNuevos.encolar(nuevo);
             }
             log("Injected " + cantidad + " satellite tasks into Disk Queue.");
@@ -230,11 +239,56 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private void activarEmergencia() {
-        log("!!! EMERGENCY INTERRUPTION: COLLISION ALERT !!!");
+        // Se llama al manejador que activa la interrupción en el Núcleo
+        manejadorHardware.activarInterrupcion();
+    }
+
+    private boolean validarCampos(String nombre, String instrucciones, String prioridad, String deadline) {
+        try {
+            if (nombre.isEmpty() || instrucciones.isEmpty() || prioridad.isEmpty() || deadline.isEmpty()) {
+                log("ERROR: Todos los campos del proceso son obligatorios.");
+                return false;
+            }
+
+            int inst = Integer.parseInt(instrucciones.trim());
+            int prio = Integer.parseInt(prioridad.trim());
+            int dead = Integer.parseInt(deadline.trim());
+
+            if (inst <= 0) {
+                log("ERROR: Las instrucciones deben ser mayores a 0.");
+                return false;
+            }
+            
+            if (prio < 1 || prio > 5) {
+                log("ERROR: La prioridad debe estar entre 1 (Baja) y 5 (Crítica).");
+                return false;
+            }
+
+            if (dead < inst) {
+                log("WARNING: Deadline crítico. El proceso podría no culminar a tiempo.");
+            }
+
+            return true;
+
+        } catch (NumberFormatException e) {
+            log("ERROR: Los valores técnicos deben ser numéricos.");
+            return false;
+        }
     }
 
     public void log(String msg) {
-        areaLog.append("> " + msg + "\n");
-        areaLog.setCaretPosition(areaLog.getDocument().getLength());
+        SwingUtilities.invokeLater(() -> {
+            areaLog.append("> " + msg + "\n");
+            areaLog.setCaretPosition(areaLog.getDocument().getLength());
+        });
+    }
+
+    // Getters para que el Reloj pueda consultar el estado de la GUI
+    public JComboBox<String> getComboAlgoritmo() {
+        return comboAlgoritmo;
+    }
+
+    public JSlider getSliderVelocidad() {
+        return sliderVelocidad;
     }
 }

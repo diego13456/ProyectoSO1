@@ -1,6 +1,4 @@
-
 package unimet.proyectoso1.sistema;
-
 
 import java.util.concurrent.Semaphore;
 import unimet.proyectoso1.estructuras.Cola;
@@ -16,6 +14,8 @@ public class Nucleo {
     public static int relojDelSistema = 0;
     public static final int LIMITE_MEMORIA_RAM = 3; 
 
+    // Agregamos esta variable para que el Reloj pueda leerla
+    public static volatile boolean bajoInterrupcion = false; 
 
     public static final Semaphore mutex = new Semaphore(1);
 }
