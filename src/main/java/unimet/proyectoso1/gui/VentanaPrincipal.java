@@ -22,7 +22,6 @@ public class VentanaPrincipal extends JFrame {
     private JComboBox<String> comboAlgoritmo;
     private JSlider sliderVelocidad;
     
-    // Referencia al manejador para las interrupciones
     private ManejadorHardware manejadorHardware;
 
     public VentanaPrincipal() {
@@ -30,6 +29,7 @@ public class VentanaPrincipal extends JFrame {
         configurarVentana();
         inicializarComponentes();
         this.setLocationRelativeTo(null); 
+        
         this.setVisible(true); 
     }
 
@@ -50,6 +50,11 @@ public class VentanaPrincipal extends JFrame {
         pnlControles.setOpaque(false);
 
         JButton btnAleatorios = new JButton("Generar 20 Procesos");
+        
+        JButton btnTareaIndividual = new JButton("➕ AÑADIR URGENTE");
+        btnTareaIndividual.setBackground(new Color(255, 140, 0)); 
+        btnTareaIndividual.setForeground(Color.WHITE);
+
         JButton btnEmergencia = new JButton("EMERGENCY INTERRUPTION");
         btnEmergencia.setBackground(new Color(200, 0, 0));
         btnEmergencia.setForeground(Color.WHITE);
@@ -63,7 +68,8 @@ public class VentanaPrincipal extends JFrame {
         sliderVelocidad.setOpaque(false);
 
         pnlControles.add(btnAleatorios);
-        pnlControles.add(btnEmergencia);
+        pnlControles.add(btnTareaIndividual); 
+        pnlControles.add(btnEmergencia);      
         pnlControles.add(crearLabelSimple("Algoritmo:"));
         pnlControles.add(comboAlgoritmo);
         pnlControles.add(crearLabelSimple("Velocidad (ms):"));
@@ -80,7 +86,6 @@ public class VentanaPrincipal extends JFrame {
         pnlCentro.setOpaque(false);
         pnlCentro.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        // Inicializar modelos
         modListos = new DefaultTableModel(new String[]{"Process [ID]", "Priority"}, 0);
         modNuevos = new DefaultTableModel(new String[]{"Process [ID]", "Priority"}, 0);
         modBloqueados = new DefaultTableModel(new String[]{"Process [ID]", "Priority"}, 0);
@@ -89,7 +94,6 @@ public class VentanaPrincipal extends JFrame {
         pnlCentro.add(crearPanelTabla("READY QUEUE (RAM)", modListos));
         pnlCentro.add(crearPanelCPU());
         pnlCentro.add(crearPanelTabla("BLOCKED QUEUE (I/O)", modBloqueados));
-
         pnlCentro.add(crearPanelTabla("READY-SUSPENDED (DISK)", modNuevos));
         pnlCentro.add(crearPanelLog()); 
         pnlCentro.add(crearPanelTabla("BLOCKED-SUSPENDED", modSuspBloq));
@@ -97,8 +101,8 @@ public class VentanaPrincipal extends JFrame {
         add(pnlNorte, BorderLayout.NORTH);
         add(pnlCentro, BorderLayout.CENTER);
 
-        // Action Listeners
         btnAleatorios.addActionListener(e -> generarProcesosLote(20));
+        btnTareaIndividual.addActionListener(e -> inyectarTareaUrgente());
         btnEmergencia.addActionListener(e -> activarEmergencia());
     }
 
@@ -108,14 +112,10 @@ public class VentanaPrincipal extends JFrame {
         p.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(COLOR_NEON_PURPURA, 2), 
                 titulo, 0, 0, null, COLOR_NEON_PURPURA));
-
         JTable t = new JTable(modelo);
         t.setBackground(new Color(20, 20, 45));
         t.setForeground(Color.WHITE);
-        t.setFont(new Font("Arial", Font.PLAIN, 12));
-        t.setRowHeight(22);
         t.setFillsViewportHeight(true);
-        
         p.add(new JScrollPane(t), BorderLayout.CENTER);
         return p;
     }
@@ -124,43 +124,25 @@ public class VentanaPrincipal extends JFrame {
         JPanel p = new JPanel(new GridLayout(4, 1, 10, 10));
         p.setBackground(new Color(15, 15, 40));
         p.setBorder(BorderFactory.createLineBorder(COLOR_CIAN, 3));
-
         JLabel titulo = new JLabel("RUNNING PROCESS (CPU)", SwingConstants.CENTER);
         titulo.setForeground(COLOR_CIAN);
-        titulo.setFont(new Font("Arial", Font.BOLD, 16));
-
         lblNombre = new JLabel("CPU IDLE", SwingConstants.CENTER);
         lblNombre.setForeground(Color.WHITE);
-        lblNombre.setFont(FUENTE_MONO);
-
         barraProgresoCPU = new JProgressBar(0, 100);
         barraProgresoCPU.setStringPainted(true);
-        barraProgresoCPU.setForeground(COLOR_CIAN);
-        barraProgresoCPU.setBackground(Color.BLACK);
-
         lblDeadline = new JLabel("Deadline: --", SwingConstants.CENTER);
         lblDeadline.setForeground(Color.YELLOW);
-
-        p.add(titulo);
-        p.add(lblNombre);
-        p.add(barraProgresoCPU);
-        p.add(lblDeadline);
-        
+        p.add(titulo); p.add(lblNombre); p.add(barraProgresoCPU); p.add(lblDeadline);
         return p;
     }
 
     private JPanel crearPanelLog() {
         JPanel p = new JPanel(new BorderLayout());
-        p.setBackground(COLOR_FONDO);
-        p.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(COLOR_CIAN), "MISSION CONTROL LOG", 0, 0, null, COLOR_CIAN));
-        
+        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(COLOR_CIAN), "LOG", 0,0,null, COLOR_CIAN));
         areaLog = new JTextArea();
         areaLog.setBackground(Color.BLACK);
         areaLog.setForeground(new Color(0, 255, 100));
         areaLog.setEditable(false);
-        areaLog.setFont(new Font("Consolas", Font.PLAIN, 12));
-        
         p.add(new JScrollPane(areaLog), BorderLayout.CENTER);
         return p;
     }
@@ -175,35 +157,23 @@ public class VentanaPrincipal extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
                 Nucleo.mutex.acquire();
-
                 lblReloj.setText(String.format("MISSION CLOCK: Cycle %04d", Nucleo.relojDelSistema));
-
                 PCB actual = Nucleo.procesoEnEjecucion;
                 if (actual != null) {
                     lblNombre.setText(actual.getNombre() + " [ID: " + actual.getId() + "]");
                     lblDeadline.setText("Deadline in: " + actual.getDeadline() + " cycles");
-                    
                     int pc = actual.getProgramCounter();
                     int total = actual.getInstruccionesTotales();
                     int porcentaje = (total > 0) ? (pc * 100) / total : 0;
-                    
                     barraProgresoCPU.setValue(porcentaje);
-                    barraProgresoCPU.setString(porcentaje + "% (PC: " + pc + ")");
                 } else {
                     lblNombre.setText("SYSTEM IDLE");
                     barraProgresoCPU.setValue(0);
-                    barraProgresoCPU.setString("0%");
-                    lblDeadline.setText("Waiting for processes...");
                 }
-
                 actualizarTablaManual(modListos, Nucleo.colaListos);
                 actualizarTablaManual(modNuevos, Nucleo.colaNuevos); 
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                Nucleo.mutex.release();
-            }
+            } catch (Exception e) { e.printStackTrace(); } 
+            finally { Nucleo.mutex.release(); }
         });
     }
 
@@ -212,68 +182,56 @@ public class VentanaPrincipal extends JFrame {
         for (int i = 0; i < cola.getTamano(); i++) {
             PCB p = cola.obtenerPorIndice(i); 
             if (p != null) {
-                modelo.addRow(new Object[]{
-                    p.getNombre() + " [ID:" + p.getId() + "]", 
-                    p.getPrioridad()
-                });
+                modelo.addRow(new Object[]{p.getNombre() + " [" + p.getId() + "]", p.getPrioridad()});
             }
         }
     }
 
-    private void generarProcesosLote(int cantidad) {
+    public void generarProcesosLote(int cantidad) {
         try {
             Nucleo.mutex.acquire();
             for (int i = 0; i < cantidad; i++) {
-                int id = (int)(Math.random() * 900) + 100;
-                // PCB: id, nombre, prioridad, instTotales, deadline, cicloExc
-                PCB nuevo = new PCB(id, "Tsk_" + id, (int)(Math.random() * 5) + 1, 10 + (int)(Math.random() * 10), 100, 0);
-                Nucleo.colaNuevos.encolar(nuevo);
+                inyectarUnProceso("Tsk_");
             }
-            log("Injected " + cantidad + " satellite tasks into Disk Queue.");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            Nucleo.mutex.release();
-            refrescarTodo(); 
-        }
+            log("SISTEMA: Inyectado lote de " + cantidad + " misiones.");
+        } catch (Exception e) { e.printStackTrace(); }
+        finally { Nucleo.mutex.release(); refrescarTodo(); }
+    }
+
+    private void inyectarTareaUrgente() {
+    try {
+        Nucleo.mutex.acquire();
+        
+        int id = (int)(Math.random() * 90) + 900;
+        int inst = 8; 
+        int prio = 5; 
+        int dead = 15; 
+        
+        PCB urgente = new PCB(id, "URGENTE_" + id, prio, inst, dead, 0);
+        
+
+        Nucleo.colaNuevos.encolarAlInicio(urgente);
+        
+        log("CRÍTICO: Tarea de emergencia " + id + " inyectada al INICIO de la cola.");
+        
+    } catch (Exception e) {
+        e.printStackTrace();
+    } finally {
+        Nucleo.mutex.release();
+        refrescarTodo();
+    }
+}
+
+    private void inyectarUnProceso(String prefijo) {
+        int id = (int)(Math.random() * 900) + 100;
+        int inst = 10 + (int)(Math.random() * 15);
+        int prio = 1 + (int)(Math.random() * 5);
+        PCB p = new PCB(id, prefijo + id, prio, inst, 100, 0);
+        Nucleo.colaNuevos.encolar(p);
     }
 
     private void activarEmergencia() {
-        // Se llama al manejador que activa la interrupción en el Núcleo
         manejadorHardware.activarInterrupcion();
-    }
-
-    private boolean validarCampos(String nombre, String instrucciones, String prioridad, String deadline) {
-        try {
-            if (nombre.isEmpty() || instrucciones.isEmpty() || prioridad.isEmpty() || deadline.isEmpty()) {
-                log("ERROR: Todos los campos del proceso son obligatorios.");
-                return false;
-            }
-
-            int inst = Integer.parseInt(instrucciones.trim());
-            int prio = Integer.parseInt(prioridad.trim());
-            int dead = Integer.parseInt(deadline.trim());
-
-            if (inst <= 0) {
-                log("ERROR: Las instrucciones deben ser mayores a 0.");
-                return false;
-            }
-            
-            if (prio < 1 || prio > 5) {
-                log("ERROR: La prioridad debe estar entre 1 (Baja) y 5 (Crítica).");
-                return false;
-            }
-
-            if (dead < inst) {
-                log("WARNING: Deadline crítico. El proceso podría no culminar a tiempo.");
-            }
-
-            return true;
-
-        } catch (NumberFormatException e) {
-            log("ERROR: Los valores técnicos deben ser numéricos.");
-            return false;
-        }
     }
 
     public void log(String msg) {
@@ -283,12 +241,6 @@ public class VentanaPrincipal extends JFrame {
         });
     }
 
-    // Getters para que el Reloj pueda consultar el estado de la GUI
-    public JComboBox<String> getComboAlgoritmo() {
-        return comboAlgoritmo;
-    }
-
-    public JSlider getSliderVelocidad() {
-        return sliderVelocidad;
-    }
+    public JComboBox<String> getComboAlgoritmo() { return comboAlgoritmo; }
+    public JSlider getSliderVelocidad() { return sliderVelocidad; }
 }

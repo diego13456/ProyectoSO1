@@ -14,8 +14,9 @@ public class Nucleo {
     public static int relojDelSistema = 0;
     public static final int LIMITE_MEMORIA_RAM = 3; 
 
-    // Agregamos esta variable para que el Reloj pueda leerla
     public static volatile boolean bajoInterrupcion = false; 
+    // AÑADE ESTA LÍNEA:
+    public static volatile int ciclosRestantesISR = 0; 
 
     public static final Semaphore mutex = new Semaphore(1);
 }

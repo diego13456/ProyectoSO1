@@ -10,21 +10,8 @@ public class ManejadorHardware {
     }
 
     public void activarInterrupcion() {
-        Thread isr = new Thread(() -> {
-            try {
-                Nucleo.bajoInterrupcion = true; // Usamos la variable global del Nucleo
-                gui.log("!!! ALERTA: MICRO-METEORITO !!! Suspendiendo procesos...");
-                
-                Thread.sleep(2500); 
-                
-                gui.log("ISR Finalizada: Sistema estabilizado.");
-            } catch (InterruptedException e) {
-                gui.log("Error en ISR.");
-            } finally {
-                Nucleo.bajoInterrupcion = false;
-            }
-        });
-        isr.setPriority(Thread.MAX_PRIORITY);
-        isr.start();
+    Nucleo.ciclosRestantesISR = 5; 
+    Nucleo.bajoInterrupcion = true;
+    gui.log("!!! ALERTA: MICRO-METEORITO !!! Atendiendo ISR...");
     }
 }

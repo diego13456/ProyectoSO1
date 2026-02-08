@@ -4,7 +4,6 @@ import unimet.proyectoso1.modelo.EstadoProceso;
 import unimet.proyectoso1.modelo.PCB;
 import unimet.proyectoso1.gui.VentanaPrincipal;
 
-
 public class Planificador {
 
     public static void planificarLargoPlazo() {
@@ -12,10 +11,36 @@ public class Planificador {
             PCB proceso = Nucleo.colaNuevos.desencolar();
             proceso.setEstado(EstadoProceso.LISTO);
             Nucleo.colaListos.encolar(proceso);
-            
-            // Usamos VentanaPrincipal.log si lo hiciste static, o System.out por ahora
             System.out.println("[PLANIFICADOR] Admitido en RAM: " + proceso.getNombre());
         }
+    }
+
+    public static void verificarDeadlines() {
+        if (Nucleo.procesoEnEjecucion != null) {
+            Nucleo.procesoEnEjecucion.decrementarDeadline(); 
+            if (Nucleo.procesoEnEjecucion.getDeadline() <= 0) {
+                marcarComoFallido(Nucleo.procesoEnEjecucion);
+                Nucleo.procesoEnEjecucion = null;
+            }
+        }
+
+        int tamano = Nucleo.colaListos.getTamano();
+        for (int i = 0; i < tamano; i++) {
+            PCB p = Nucleo.colaListos.desencolar();
+            p.decrementarDeadline();
+            
+            if (p.getDeadline() <= 0) {
+                marcarComoFallido(p);
+            } else {
+                Nucleo.colaListos.encolar(p); 
+            }
+        }
+    }
+
+    private static void marcarComoFallido(PCB p) {
+        p.setEstado(EstadoProceso.TERMINADO); 
+        Nucleo.colaTerminados.encolar(p);
+        System.out.println("[ALERTA] Misión Fallida (Deadline): " + p.getNombre());
     }
 
     public static void planificarCortoPlazo(String algoritmo) {
@@ -36,7 +61,6 @@ public class Planificador {
         }
     }
 
-    
     private static void ejecutarFCFS() {
         if (Nucleo.procesoEnEjecucion == null && !Nucleo.colaListos.estaVacia()) {
             asignarCPU();
@@ -53,11 +77,9 @@ public class Planificador {
 
                 if (restanteNuevo < restanteActual) {
                     System.out.println("[SRT] Preempción: " + masCortoEnCola.getNombre() + " expulsa a " + Nucleo.procesoEnEjecucion.getNombre());
-                    
                     Nucleo.procesoEnEjecucion.setEstado(EstadoProceso.LISTO);
                     Nucleo.colaListos.encolar(Nucleo.procesoEnEjecucion);
                     Nucleo.procesoEnEjecucion = null;
-                    
                 }
             }
             
@@ -75,6 +97,6 @@ public class Planificador {
     }
 
     private static PCB buscarMasCortoEnListos() {
-        return (PCB) Nucleo.colaListos.verFrente(); 
+        return Nucleo.colaListos.verFrente(); 
     }
 }

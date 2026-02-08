@@ -17,39 +17,32 @@ public class Reloj extends Thread {
     public void run() {
         while (enEjecucion) {
             try {
-                // 1. Gestionar Velocidad desde el Slider de la GUI
                 long delay = gui.getSliderVelocidad().getValue();
                 Thread.sleep(delay);
 
-                // 2. Control de Interrupción (ISR)
-                // Si hay emergencia, el reloj sigue contando pero el RTOS se detiene
-                if (Nucleo.bajoInterrupcion) {
-                    continue; 
-                }
-
-                Nucleo.mutex.acquire();
+                Nucleo.mutex.acquire(); 
                 try {
-                    // 3. Incrementar el Reloj de Misión
                     Nucleo.relojDelSistema++;
 
-                    // 4. Planificación de Largo Plazo (Cargar procesos a RAM)
-                    Planificador.planificarLargoPlazo();
+                    Planificador.verificarDeadlines();
 
-                    // 5. Planificación de Corto Plazo (Dispatcher)
-                    // Obtenemos el algoritmo seleccionado en el ComboBox en tiempo real
-                    String algoritmoSeleccionado = (String) gui.getComboAlgoritmo().getSelectedItem();
-                    Planificador.planificarCortoPlazo(algoritmoSeleccionado);
+                    if (Nucleo.bajoInterrupcion) {
+                        gestionarCicloISR();
+                    } else {
+                        Planificador.planificarLargoPlazo();
+                        
+                        String algoritmoSeleccionado = (String) gui.getComboAlgoritmo().getSelectedItem();
+                        Planificador.planificarCortoPlazo(algoritmoSeleccionado);
 
-                    // 6. Ejecución de la instrucción actual en CPU
-                    if (Nucleo.procesoEnEjecucion != null) {
-                        ejecutarCicloCPU(Nucleo.procesoEnEjecucion);
+                        if (Nucleo.procesoEnEjecucion != null) {
+                            ejecutarCicloCPU(Nucleo.procesoEnEjecucion);
+                        }
                     }
 
                 } finally {
                     Nucleo.mutex.release();
                 }
 
-                // 7. Actualizar la Interfaz Gráfica
                 gui.refrescarTodo();
 
             } catch (InterruptedException e) {
@@ -59,14 +52,22 @@ public class Reloj extends Thread {
         }
     }
 
-    private void ejecutarCicloCPU(PCB p) {
-        // Incrementar el PC (Program Counter)
-        p.incrementarPC();
+    private void gestionarCicloISR() {
+        Nucleo.ciclosRestantesISR--;
+        gui.log("SISTEMA OCUPADO: Atendiendo interrupción de hardware...");
         
-        // Simular ejecución: Si llega al total de instrucciones, termina
+        if (Nucleo.ciclosRestantesISR <= 0) {
+            Nucleo.bajoInterrupcion = false;
+            gui.log("ISR Finalizada: Retornando control al planificador.");
+        }
+    }
+
+    private void ejecutarCicloCPU(PCB p) {
+        p.incrementarPC(); 
+        
         if (p.getProgramCounter() >= p.getInstruccionesTotales()) {
             p.setEstado(EstadoProceso.TERMINADO);
-            gui.log("Task Finished: " + p.getNombre() + " [ID: " + p.getId() + "]");
+            gui.log("Misión Completada: " + p.getNombre());
             Nucleo.procesoEnEjecucion = null;
         }
     }
