@@ -15,8 +15,15 @@ public class Nucleo {
     public static final int LIMITE_MEMORIA_RAM = 3; 
 
     public static volatile boolean bajoInterrupcion = false; 
-    // AÑADE ESTA LÍNEA:
     public static volatile int ciclosRestantesISR = 0; 
 
     public static final Semaphore mutex = new Semaphore(1);
+    public static int misionesExitosas = 0;
+    public static int misionesFallidas = 0;
+
+    public static double getTasaExito() {
+        int total = misionesExitosas + misionesFallidas;
+        if (total == 0) return 0.0;
+        return ((double) misionesExitosas / total) * 100;
+    }
 }

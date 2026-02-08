@@ -226,7 +226,8 @@ public class VentanaPrincipal extends JFrame {
         int id = (int)(Math.random() * 900) + 100;
         int inst = 10 + (int)(Math.random() * 15);
         int prio = 1 + (int)(Math.random() * 5);
-        PCB p = new PCB(id, prefijo + id, prio, inst, 100, 0);
+        int dead = 30 + (int)(Math.random() * 50);
+        PCB p = new PCB(id, prefijo + id, prio, inst, dead, 0);
         Nucleo.colaNuevos.encolar(p);
     }
 

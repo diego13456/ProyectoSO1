@@ -63,12 +63,16 @@ public class Reloj extends Thread {
     }
 
     private void ejecutarCicloCPU(PCB p) {
-        p.incrementarPC(); 
+    p.incrementarPC(); 
+    
+    if (p.getProgramCounter() >= p.getInstruccionesTotales()) {
+        p.setEstado(EstadoProceso.TERMINADO);
+        Nucleo.colaTerminados.encolar(p);
         
-        if (p.getProgramCounter() >= p.getInstruccionesTotales()) {
-            p.setEstado(EstadoProceso.TERMINADO);
-            gui.log("Misión Completada: " + p.getNombre());
-            Nucleo.procesoEnEjecucion = null;
-        }
+        Nucleo.misionesExitosas++; 
+        
+        gui.log("Misión Completada: " + p.getNombre());
+        Nucleo.procesoEnEjecucion = null;
     }
+}
 }

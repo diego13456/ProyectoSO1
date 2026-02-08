@@ -3,6 +3,7 @@ package unimet.proyectoso1.sistema;
 import unimet.proyectoso1.modelo.EstadoProceso;
 import unimet.proyectoso1.modelo.PCB;
 import unimet.proyectoso1.gui.VentanaPrincipal;
+import unimet.proyectoso1.estructuras.Cola;
 
 public class Planificador {
 
@@ -23,30 +24,47 @@ public class Planificador {
                 Nucleo.procesoEnEjecucion = null;
             }
         }
+        procesarColaDeadlines(Nucleo.colaListos);
 
-        int tamano = Nucleo.colaListos.getTamano();
-        for (int i = 0; i < tamano; i++) {
-            PCB p = Nucleo.colaListos.desencolar();
-            p.decrementarDeadline();
-            
-            if (p.getDeadline() <= 0) {
-                marcarComoFallido(p);
-            } else {
-                Nucleo.colaListos.encolar(p); 
-            }
+        procesarColaDeadlines(Nucleo.colaNuevos);
+
+    }
+    
+        private static void procesarColaDeadlines(Cola<PCB> cola) {
+    int tamano = cola.getTamano();
+    for (int i = 0; i < tamano; i++) {
+        PCB p = cola.desencolar();
+        
+        // 1. PRIMERO RESTAR: Así permitimos que el 1 pase a ser 0
+        p.decrementarDeadline(); 
+        
+        // 2. LUEGO VERIFICAR: Si es 0 o menor, ha fallado
+        if (p.getDeadline() <= 0) { 
+            // Esto genera el log: "Fallo de Deadline en Proceso Y" 
+            marcarComoFallido(p); 
+        } else {
+            // Si aún le queda tiempo, vuelve a la cola
+            cola.encolar(p); 
         }
     }
+}
 
     private static void marcarComoFallido(PCB p) {
-        p.setEstado(EstadoProceso.TERMINADO); 
-        Nucleo.colaTerminados.encolar(p);
-        System.out.println("[ALERTA] Misión Fallida (Deadline): " + p.getNombre());
-    }
+    p.setEstado(EstadoProceso.TERMINADO); 
+    Nucleo.colaTerminados.encolar(p);
+    
+    Nucleo.misionesFallidas++;
+    
+    System.out.println("[ALERTA] Fallo de Deadline en Proceso " + p.getNombre());
+}
 
     public static void planificarCortoPlazo(String algoritmo) {
         if (Nucleo.colaListos.estaVacia() && Nucleo.procesoEnEjecucion == null) {
             return;
         }
+        if (Nucleo.procesoEnEjecucion == null && !Nucleo.colaListos.estaVacia()) {
+        asignarCPU();
+    }
 
         switch (algoritmo.toUpperCase()) {
             case "FCFS":
