@@ -53,20 +53,17 @@ public class Cola<T> extends ListaEnlazada<T> {
      public boolean remover(T dato) {
         if (estaVacia()) return false;
 
-        // Caso 1: Es el frente
         if (frente.getDato().equals(dato)) {
             desencolar();
             return true;
         }
 
-        // Caso 2: Buscar en el resto
         Nodo<T> actual = frente;
         while (actual.getSiguiente() != null) {
             if (actual.getSiguiente().getDato().equals(dato)) {
                 Nodo<T> aEliminar = actual.getSiguiente();
                 actual.setSiguiente(aEliminar.getSiguiente());
                 
-                // Si eliminamos el último, actualizamos finalCola
                 if (aEliminar == finalCola) {
                     finalCola = actual;
                 }

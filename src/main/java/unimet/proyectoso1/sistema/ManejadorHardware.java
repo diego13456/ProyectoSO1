@@ -10,10 +10,9 @@ public class ManejadorHardware {
     }
 
     public void activarInterrupcion() {
-    // Creamos un hilo independiente para la interrupción
     Thread hiloInterrupcion = new Thread(() -> {
         try {
-            Nucleo.mutex.acquire(); // Bloqueamos para avisar al sistema
+            Nucleo.mutex.acquire(); 
             Nucleo.bajoInterrupcion = true;
             Nucleo.ciclosRestantesISR = 5;
             gui.log("!!! ALERTA: MICRO-METEORITO !!! Atendiendo ISR en hilo independiente...");

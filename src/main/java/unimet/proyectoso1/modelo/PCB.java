@@ -13,6 +13,7 @@ public class PCB {
     private int deadline; 
     private int cicloExcepcion; 
 
+
     public PCB(int id, String nombre, int prioridad, int instruccionesTotales, int deadline, int cicloExcepcion) {
         this.id = id;
         this.nombre = nombre;
@@ -35,7 +36,11 @@ public class PCB {
     public void incrementarMAR() {
         this.memoryAddressRegister++;
     }
+    
+private int tiempoEspera = 0;
 
+public void incrementarEspera() { this.tiempoEspera++; }
+public int getTiempoEspera() { return tiempoEspera; }
 
     public int getId() { return id; }
     

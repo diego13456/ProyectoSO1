@@ -7,6 +7,6 @@ public enum EstadoProceso {
     EJECUCION,
     BLOQUEADO,
     TERMINADO,
-    LISTO_SUSPENDIDO,   // En disco, listo para ejecutar
-    BLOQUEADO_SUSPENDIDO // En disco, esperando I/O
+    LISTO_SUSPENDIDO, 
+    BLOQUEADO_SUSPENDIDO 
 }
