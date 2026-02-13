@@ -21,6 +21,18 @@ public class Cola<T> extends ListaEnlazada<T> {
         finalCola = nuevo;
         tamano++;
     }
+    
+     public void encolarAlInicio(T dato) {
+        Nodo<T> nuevo = new Nodo<>(dato);
+        if (estaVacia()) {
+            frente = nuevo;
+            finalCola = nuevo;
+        } else {
+            nuevo.setSiguiente(frente);
+            frente = nuevo;
+        }
+        tamano++;
+    }
 
     public void insertar(T dato) {
         encolar(dato);
@@ -38,23 +50,40 @@ public class Cola<T> extends ListaEnlazada<T> {
         tamano--;
         return dato;
     }
+     public boolean remover(T dato) {
+        if (estaVacia()) return false;
+
+        // Caso 1: Es el frente
+        if (frente.getDato().equals(dato)) {
+            desencolar();
+            return true;
+        }
+
+        // Caso 2: Buscar en el resto
+        Nodo<T> actual = frente;
+        while (actual.getSiguiente() != null) {
+            if (actual.getSiguiente().getDato().equals(dato)) {
+                Nodo<T> aEliminar = actual.getSiguiente();
+                actual.setSiguiente(aEliminar.getSiguiente());
+                
+                // Si eliminamos el último, actualizamos finalCola
+                if (aEliminar == finalCola) {
+                    finalCola = actual;
+                }
+                tamano--;
+                return true;
+            }
+            actual = actual.getSiguiente();
+        }
+        return false;
+    }
 
     public T verFrente() {
         if (estaVacia()) return null;
         return frente.getDato();
     }
     
-    public void encolarAlInicio(T dato) {
-    Nodo<T> nuevo = new Nodo<>(dato);
-    if (estaVacia()) {
-        frente = nuevo;
-        finalCola = nuevo;
-    } else {
-        nuevo.setSiguiente(frente);
-        frente = nuevo;
-    }
-    tamano++;
-}
+    
 
     @Override 
     public boolean estaVacia() {

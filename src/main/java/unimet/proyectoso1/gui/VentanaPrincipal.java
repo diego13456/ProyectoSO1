@@ -170,8 +170,11 @@ public class VentanaPrincipal extends JFrame {
                     lblNombre.setText("SYSTEM IDLE");
                     barraProgresoCPU.setValue(0);
                 }
-                actualizarTablaManual(modListos, Nucleo.colaListos);
-                actualizarTablaManual(modNuevos, Nucleo.colaNuevos); 
+                                // En el método refrescarTodo():
+                actualizarTablaManual(modListos, Nucleo.colaListos);      // READY QUEUE (RAM)
+                actualizarTablaManual(modBloqueados, Nucleo.colaBloqueados); // BLOCKED QUEUE (RAM)
+                actualizarTablaManual(modNuevos, Nucleo.colaReadySuspended); // READY-SUSPENDED (DISK)
+                actualizarTablaManual(modSuspBloq, Nucleo.colaBlockedSuspended); // BLOCKED-SUSPENDED (DISK)
             } catch (Exception e) { e.printStackTrace(); } 
             finally { Nucleo.mutex.release(); }
         });
@@ -224,10 +227,11 @@ public class VentanaPrincipal extends JFrame {
 
     private void inyectarUnProceso(String prefijo) {
         int id = (int)(Math.random() * 900) + 100;
-        int inst = 10 + (int)(Math.random() * 15);
-        int prio = 1 + (int)(Math.random() * 5);
-        int dead = 30 + (int)(Math.random() * 50);
-        PCB p = new PCB(id, prefijo + id, prio, inst, dead, 0);
+    int inst = 10 + (int)(Math.random() * 10); // 10-20 instrucciones
+    int prio = 1 + (int)(Math.random() * 5);
+    // Pon un deadline que sea al menos 10 veces el tiempo de ejecución
+    int dead = 150 + (int)(Math.random() * 200); 
+    PCB p = new PCB(id, prefijo + id, prio, inst, dead, 0);
         Nucleo.colaNuevos.encolar(p);
     }
 

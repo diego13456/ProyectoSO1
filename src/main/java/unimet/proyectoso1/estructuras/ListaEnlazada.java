@@ -72,4 +72,5 @@ public class ListaEnlazada<T> {
         }
         return actual.getDato();
     }
+    
 }
