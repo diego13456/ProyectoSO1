@@ -1,46 +1,89 @@
 package unimet.proyectoso1.sistema;
 
-import javax.swing.SwingUtilities;
 import unimet.proyectoso1.gui.VentanaPrincipal;
+import unimet.proyectoso1.modelo.EstadoProceso;
+import unimet.proyectoso1.modelo.PCB;
 
 public class Reloj extends Thread {
-    private int tiempoPulsoMs; 
-    private final VentanaPrincipal ventana; 
 
-    public Reloj(int tiempoPulsoMs, VentanaPrincipal ventana) {
-        this.tiempoPulsoMs = tiempoPulsoMs;
-        this.ventana = ventana;
+    private VentanaPrincipal gui;
+    private boolean enEjecucion = true;
+
+    public Reloj(VentanaPrincipal gui) {
+        this.gui = gui;
     }
 
     @Override
     public void run() {
-        while (true) {
+        while (enEjecucion) {
             try {
-                Thread.sleep(tiempoPulsoMs);
+                long delay = gui.getSliderVelocidad().getValue();
+                Thread.sleep(delay);
 
                 Nucleo.mutex.acquire(); 
+                try {
+                    Nucleo.relojDelSistema++;
 
-                Nucleo.relojDelSistema++;
+                    if (Nucleo.bajoInterrupcion) {
+                        gestionarCicloISR();
+                    } else {
+                        Planificador.verificarDeadlines();
+                        
+                        Planificador.contabilizarEspera();
 
-                Planificador.planificarLargoPlazo(); 
-                Planificador.planificarCortoPlazo(); 
+                        Planificador.gestionarBloqueados(); 
+                        Planificador.planificarLargoPlazo(); 
+                        Planificador.planificarMedianoPlazo(); 
+                        
+                        String algoritmoSeleccionado = (String) gui.getComboAlgoritmo().getSelectedItem();
+                        Planificador.planificarCortoPlazo(algoritmoSeleccionado);
 
-                CPU.ejecutarCiclo();
+                        if (Nucleo.procesoEnEjecucion != null) {
+                            Nucleo.ciclosCPUOcupada++;
+                            ejecutarCicloCPU(Nucleo.procesoEnEjecucion);
+                        }
+                    }
 
-                SwingUtilities.invokeLater(() -> {
-                    ventana.refrescarTodo();
-                });
+                } finally {
+                    Nucleo.mutex.release();
+                }
 
-                Nucleo.mutex.release(); 
+                gui.refrescarTodo();
 
             } catch (InterruptedException e) {
-                System.err.println("Reloj interrumpido: " + e.getMessage());
-                break; 
+                enEjecucion = false;
+                Thread.currentThread().interrupt();
             }
         }
     }
 
-    public void setVelocidad(int nuevaVelocidadMs) {
-        this.tiempoPulsoMs = nuevaVelocidadMs;
+    private void gestionarCicloISR() {
+        Nucleo.ciclosRestantesISR--;
+        gui.log("SISTEMA OCUPADO: Atendiendo interrupción de hardware...");
+        
+        if (Nucleo.ciclosRestantesISR <= 0) {
+            Nucleo.bajoInterrupcion = false;
+            gui.log("ISR Finalizada: Retornando control al planificador.");
+        }
+    }
+
+    private void ejecutarCicloCPU(PCB p) {
+        p.incrementarPC(); 
+        Nucleo.contadorQuantum++;
+        
+        if (p.getProgramCounter() >= p.getInstruccionesTotales()) {
+            p.setEstado(EstadoProceso.TERMINADO);
+            Nucleo.colaTerminados.encolar(p);
+            
+            Nucleo.misionesExitosas++; 
+            Nucleo.totalProcesosFinalizados++;
+            
+            Nucleo.sumatoriaTiempoEspera += p.getTiempoEspera();
+            
+            gui.log("Misión Completada: " + p.getNombre() + " | Espera total: " + p.getTiempoEspera());
+            
+            Nucleo.procesoEnEjecucion = null;
+            Nucleo.contadorQuantum = 0;
+        }
     }
 }

@@ -1,5 +1,5 @@
-
 package unimet.proyectoso1.modelo;
+
 public class PCB {
     private int id;
     private String nombre;
@@ -22,12 +22,25 @@ public class PCB {
         this.deadline = deadline;
         this.cicloExcepcion = cicloExcepcion;
         
-        // Inicializaciones por defecto requeridas
         this.estado = EstadoProceso.NUEVO;
         this.programCounter = 0;
         this.memoryAddressRegister = 0;
     }
+    
+    public void decrementarDeadline() {
+        if (this.deadline > 0) {
+            this.deadline--;
+        }
+    }
 
+    public void incrementarMAR() {
+        this.memoryAddressRegister++;
+    }
+    
+private int tiempoEspera = 0;
+
+public void incrementarEspera() { this.tiempoEspera++; }
+public int getTiempoEspera() { return tiempoEspera; }
 
     public int getId() { return id; }
     
@@ -56,6 +69,6 @@ public class PCB {
     @Override
     public String toString() {
         return "PCB{" + "id=" + id + ", nombre=" + nombre + ", estado=" + estado + 
-               ", PC=" + programCounter + ", Prio=" + prioridad + '}';
+               ", PC=" + programCounter + ", MAR=" + memoryAddressRegister + ", Deadline=" + deadline + '}';
     }
 }

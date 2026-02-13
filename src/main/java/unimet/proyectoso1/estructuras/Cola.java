@@ -1,7 +1,6 @@
-
 package unimet.proyectoso1.estructuras;
 
-public class Cola<T> {
+public class Cola<T> extends ListaEnlazada<T> {
     private Nodo<T> frente;
     private Nodo<T> finalCola;
     private int tamano;
@@ -22,6 +21,22 @@ public class Cola<T> {
         finalCola = nuevo;
         tamano++;
     }
+    
+     public void encolarAlInicio(T dato) {
+        Nodo<T> nuevo = new Nodo<>(dato);
+        if (estaVacia()) {
+            frente = nuevo;
+            finalCola = nuevo;
+        } else {
+            nuevo.setSiguiente(frente);
+            frente = nuevo;
+        }
+        tamano++;
+    }
+
+    public void insertar(T dato) {
+        encolar(dato);
+    }
 
     public T desencolar() {
         if (estaVacia()) return null; 
@@ -35,12 +50,39 @@ public class Cola<T> {
         tamano--;
         return dato;
     }
+     public boolean remover(T dato) {
+        if (estaVacia()) return false;
+
+        if (frente.getDato().equals(dato)) {
+            desencolar();
+            return true;
+        }
+
+        Nodo<T> actual = frente;
+        while (actual.getSiguiente() != null) {
+            if (actual.getSiguiente().getDato().equals(dato)) {
+                Nodo<T> aEliminar = actual.getSiguiente();
+                actual.setSiguiente(aEliminar.getSiguiente());
+                
+                if (aEliminar == finalCola) {
+                    finalCola = actual;
+                }
+                tamano--;
+                return true;
+            }
+            actual = actual.getSiguiente();
+        }
+        return false;
+    }
 
     public T verFrente() {
         if (estaVacia()) return null;
         return frente.getDato();
     }
+    
+    
 
+    @Override 
     public boolean estaVacia() {
         return frente == null;
     }
@@ -50,14 +92,14 @@ public class Cola<T> {
     }
     
     public T obtenerPorIndice(int indice) {
-    if (indice < 0 || indice >= tamano) {
-        return null;
+        if (indice < 0 || indice >= tamano) {
+            return null;
+        }
+        
+        Nodo<T> actual = frente;
+        for (int i = 0; i < indice; i++) {
+            actual = actual.getSiguiente();
+        }
+        return actual.getDato();
     }
-    
-    Nodo<T> actual = frente;
-    for (int i = 0; i < indice; i++) {
-        actual = actual.getSiguiente();
-    }
-    return actual.getDato();
-}
 }
