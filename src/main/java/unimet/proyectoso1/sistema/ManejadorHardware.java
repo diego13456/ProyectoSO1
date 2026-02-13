@@ -10,8 +10,19 @@ public class ManejadorHardware {
     }
 
     public void activarInterrupcion() {
-    Nucleo.ciclosRestantesISR = 5; 
-    Nucleo.bajoInterrupcion = true;
-    gui.log("!!! ALERTA: MICRO-METEORITO !!! Atendiendo ISR...");
-    }
+    // Creamos un hilo independiente para la interrupción
+    Thread hiloInterrupcion = new Thread(() -> {
+        try {
+            Nucleo.mutex.acquire(); // Bloqueamos para avisar al sistema
+            Nucleo.bajoInterrupcion = true;
+            Nucleo.ciclosRestantesISR = 5;
+            gui.log("!!! ALERTA: MICRO-METEORITO !!! Atendiendo ISR en hilo independiente...");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            Nucleo.mutex.release();
+        }
+    });
+    hiloInterrupcion.start();
+}
 }
